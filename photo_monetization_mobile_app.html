@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SnapEarn - Photo Interaction Platform</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            },
+            dark: {
+              bg: '#0b0f19',
+              card: '#161e2e',
+              border: '#273549',
+              accent: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar & mobile touch optimization */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      background-color: #0b0f19;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .active-nav {
+      color: #22c55e !important;
+    }
+    /* Smooth modal transition */
+    .modal-backdrop {
+      background-color: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden justify-between">
+
+  <!-- Top App Header -->
+  <header class="bg-dark-card border-b border-dark-border px-4 py-3 flex justify-between items-center z-10 sticky top-0">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-500 to-emerald-300 flex items-center justify-center font-bold text-dark-bg text-lg shadow-lg">
+        <i class="fa-solid fa-camera"></i>
+      </div>
+      <span class="font-bold text-lg tracking-wide text-white">Snap<span class="text-brand-500">Earn</span></span>
+    </div>
+
+    <!-- Wallet Quick View -->
+    <button onclick="openWalletModal()" class="flex items-center space-x-2 bg-dark-bg border border-dark-border px-3 py-1.5 rounded-full hover:border-brand-500 transition">
+      <i class="fa-solid fa-wallet text-brand-500 text-sm"></i>
+      <span class="text-sm font-semibold text-emerald-400">$<span id="headerBalance">12.50</span></span>
+    </button>
+  </header>
+
+  <!-- MAIN SCROLLABLE CONTENT AREA -->
+  <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-w-md mx-auto w-full">
+
+    <!-- Daily Bonus Card -->
+    <div id="bonusBanner" class="bg-gradient-to-r from-emerald-900/40 to-dark-card border border-brand-500/30 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden shadow-md">
+      <div class="space-y-1 z-10">
+        <span class="bg-brand-500/20 text-brand-500 text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Daily Bonus</span>
+        <h3 class="font-bold text-white text-base">Claim Today's Reward</h3>
+        <p class="text-xs text-gray-400">+ $1.00 added directly to wallet</p>
+      </div>
+      <button id="claimBtn" onclick="claimDailyBonus()" class="z-10 bg-brand-500 hover:bg-brand-600 active:scale-95 text-dark-bg font-bold px-4 py-2 rounded-xl text-xs transition shadow-lg">
+        Claim $1.00
+      </button>
+    </div>
+
+    <!-- Upload New Photo Action Box -->
+    <div class="bg-dark-card border border-dashed border-dark-border hover:border-brand-500/50 rounded-2xl p-4 text-center transition">
+      <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
+      <label for="photoInput" class="cursor-pointer flex flex-col items-center justify-center space-y-2">
+        <div class="w-12 h-12 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-sm text-gray-200">Post Photo & Earn Per Interaction</p>
+          <p class="text-xs text-gray-400">Earn up to $0.50 per like & comment received</p>
+        </div>
+      </label>
+    </div>
+
+    <!-- Interactive Photo Feed -->
+    <div class="space-y-4" id="photoFeed">
+      <!-- Feed Items dynamically injected via JS -->
+    </div>
+
+  </main>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="bg-dark-card border-t border-dark-border px-6 py-2 flex justify-around items-center z-10 max-w-md mx-auto w-full">
+    <button onclick="switchTab('feed')" id="nav-feed" class="flex flex-col items-center space-y-1 active-nav text-gray-400">
+      <i class="fa-solid fa-house text-lg"></i>
+      <span class="text-[10px] font-medium">Feed</span>
+    </button>
+    <button onclick="document.getElementById('photoInput').click()" class="flex flex-col items-center justify-center -mt-5 bg-brand-500 text-dark-bg w-12 h-12 rounded-full shadow-lg border-4 border-dark-bg active:scale-90 transition">
+      <i class="fa-solid fa-plus text-lg"></i>
+    </button>
+    <button onclick="openWalletModal()" id="nav-wallet" class="flex flex-col items-center space-y-1 text-gray-400">
+      <i class="fa-solid fa-wallet text-lg"></i>
+      <span class="text-[10px] font-medium">Wallet</span>
+    </button>
+  </nav>
+
+  <!-- Wallet / Payout Modal -->
+  <div id="walletModal" class="fixed inset-0 modal-backdrop hidden flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+    <div class="bg-dark-card w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-dark-border p-6 space-y-6 shadow-2xl animate-fade-in">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center pb-3 border-b border-dark-border">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-building-columns text-brand-500"></i> Wallet & Payouts
+        </h3>
+        <button onclick="closeWalletModal()" class="text-gray-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Balance Card -->
+      <div class="bg-dark-bg rounded-xl p-4 border border-dark-border text-center space-y-1">
+        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Available Balance</p>
+        <p class="text-3xl font-extrabold text-brand-500">$<span id="modalBalance">12.50</span></p>
+      </div>
+
+      <!-- Payout Form -->
+      <form onsubmit="handlePayoutSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Select Payment Method</label>
+          <select id="payoutMethod" class="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-brand-500">
+            <option value="paypal">PayPal Instant Transfer</option>
+            <option value="usdt">Crypto Wallet (USDT - TRC20)</option>
+            <option value="bank">Direct Bank Transfer</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Account / Address Details</label>
+          <input type="text" id="payoutDetails" required placeholder="e.g. user@example.com or wallet address" class="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Withdrawal Amount ($)</label>
+          <input type="number" id="payoutAmount" min="5" step="0.50" value="10" required class="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-brand-500">
+          <span class="text-[10px] text-gray-400 mt-1 block">Minimum withdrawal amount: $5.00</span>
+        </div>
+
+        <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-dark-bg font-bold py-3 rounded-xl text-sm transition shadow-lg active:scale-95">
+          Request Instant Payout
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Application State Variables
+    let userBalance = 12.50;
+    let dailyClaimed = false;
+
+    // Initial Mock Feed Items
+    const initialFeed = [
+      {
+        id: 1,
+        author: "Alex Rivers",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+        image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80",
+        caption: "Sunrise at Bali beaches! 🌅 What do you think?",
+        likes: 124,
+        earnedPerLike: 0.15,
+        interacted: false
+      },
+      {
+        id: 2,
+        author: "Sarah Jenkins",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+        image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&auto=format&fit=crop&q=80",
+        caption: "Homemade artisan pizza night 🍕🔥",
+        likes: 89,
+        earnedPerLike: 0.20,
+        interacted: false
+      }
+    ];
+
+    // Initialize UI on window load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderFeed();
+      updateBalanceDisplay();
+    });
+
+    // Render Feed Array to DOM
+    function renderFeed() {
+      const container = document.getElementById('photoFeed');
+      container.innerHTML = initialFeed.map(post => `
+        <div class="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3 shadow-lg">
+          <div class="flex items-center space-x-3">
+            <img src="${post.avatar}" class="w-9 h-9 rounded-full object-cover border border-brand-500/40">
+            <div>
+              <p class="font-bold text-sm text-gray-100">${post.author}</p>
+              <p class="text-[10px] text-gray-400">Verified Creator</p>
+            </div>
+          </div>
+          
+          <img src="${post.image}" class="w-full h-64 object-cover rounded-xl border border-dark-border">
+
+          <p class="text-xs text-gray-300">${post.caption}</p>
+
+          <div class="flex justify-between items-center pt-2 border-t border-dark-border/60">
+            <button onclick="interactWithPost(${post.id})" ${post.interacted ? 'disabled' : ''} 
+              class="${post.interacted ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-brand-500/10 hover:bg-brand-500/20 text-brand-500'} 
+              px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition active:scale-95">
+              <i class="fa-solid fa-heart ${post.interacted ? '' : 'text-brand-500'}"></i>
+              <span>${post.interacted ? 'Earned +$' + post.earnedPerLike.toFixed(2) : 'Interact (+$' + post.earnedPerLike.toFixed(2) + ')'}</span>
+            </button>
+            <span class="text-xs text-gray-400"><i class="fa-regular fa-heart mr-1"></i> ${post.likes}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Handle Interaction & Earn Cash
+    function interactWithPost(postId) {
+      const post = initialFeed.find(p => p.id === postId);
+      if (post && !post.interacted) {
+        post.interacted = true;
+        post.likes += 1;
+        userBalance += post.earnedPerLike;
+        
+        updateBalanceDisplay();
+        renderFeed();
+      }
+    }
+
+    // Handle Photo Upload Simulation
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const newPost = {
+            id: Date.now(),
+            author: "You (Creator)",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+            image: e.target.result,
+            caption: "Just uploaded a new photo interaction! 📸",
+            likes: 1,
+            earnedPerLike: 0.25,
+            interacted: true
+          };
+
+          // Reward user instantly for uploading
+          userBalance += 0.50;
+          initialFeed.unshift(newPost);
+          
+          updateBalanceDisplay();
+          renderFeed();
+
+          alert("Photo published successfully! You earned +$0.50 upload reward.");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Daily Bonus Functionality
+    function claimDailyBonus() {
+      if (!dailyClaimed) {
+        dailyClaimed = true;
+        userBalance += 1.00;
+        
+        const claimBtn = document.getElementById('claimBtn');
+        claimBtn.innerText = "Claimed ✓";
+        claimBtn.classList.replace('bg-brand-500', 'bg-gray-700');
+        claimBtn.classList.replace('text-dark-bg', 'text-gray-400');
+        claimBtn.disabled = true;
+
+        updateBalanceDisplay();
+      }
+    }
+
+    // Update Balance UI everywhere
+    function updateBalanceDisplay() {
+      document.getElementById('headerBalance').innerText = userBalance.toFixed(2);
+      document.getElementById('modalBalance').innerText = userBalance.toFixed(2);
+    }
+
+    // Modal Control Functions
+    function openWalletModal() {
+      document.getElementById('walletModal').classList.remove('hidden');
+    }
+
+    function closeWalletModal() {
+      document.getElementById('walletModal').classList.add('hidden');
+    }
+
+    // Handle Withdrawal Request
+    function handlePayoutSubmit(event) {
+      event.preventDefault();
+      const amount = parseFloat(document.getElementById('payoutAmount').value);
+      
+      if (amount > userBalance) {
+        alert("Insufficient balance for this payout amount.");
+        return;
+      }
+
+      userBalance -= amount;
+      updateBalanceDisplay();
+      closeWalletModal();
+      
+      alert(`Payout request of $${amount.toFixed(2)} submitted successfully! Processed within 24 hours.`);
+    }
+
+    function switchTab(tab) {
+      if (tab === 'wallet') {
+        openWalletModal();
+      }
+    }
+  </script>
+</body>
+</html>
